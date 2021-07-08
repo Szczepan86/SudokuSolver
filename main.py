@@ -7,9 +7,8 @@ class SudokuSolver:
                 self.sudoku.append(row)
         self.initial_sudoku = self.sudoku
         self.candidates = [[set(range(1, 10)) for x in range(9)] for x in range(9)]
-        print(self.candidates)
 
-    def scanning(self):
+    def scan(self):
         for line_nb, line in enumerate(self.sudoku):
             for col_nb, element in enumerate(line):
                 if element.isdigit() and self.candidates[line_nb][col_nb]:
@@ -24,6 +23,18 @@ class SudokuSolver:
                             self.candidates[y][x].discard(int(element))
                     # remove all candidates when digit is known
                     self.candidates[line_nb][col_nb] = set()
+
+    def update(self):
+        counter = 0
+        for line_nb in range(9):
+            for col_nb in range(9):
+                if len(self.candidates[line_nb][col_nb]) == 1:
+                    counter += 1
+                    self.sudoku[line_nb][col_nb] = str(self.candidates[line_nb][col_nb].pop())
+        if counter > 0:
+            print(f'{counter} digit(s) updated.')
+            return True
+        return False
 
     def __str__(self):
         output = ''
@@ -42,4 +53,9 @@ class SudokuSolver:
 if __name__ == '__main__':
     sudoku = SudokuSolver('tables\\sudoku01.txt')
     print(sudoku)
-    sudoku.scanning()
+    sudoku.scan()
+    sudoku.update()
+    print(sudoku)
+    sudoku.scan()
+    sudoku.update()
+    print(sudoku)
