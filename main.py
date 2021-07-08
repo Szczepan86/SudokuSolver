@@ -6,23 +6,55 @@ class SudokuSolver:
                 row = [d for d in line if d.isdigit() or d == '.']
                 self.sudoku.append(row)
         self.initial_sudoku = self.sudoku
-        self.candidates = [[set(range(1, 10)) for x in range(9)] for x in range(9)]
+        self.candidates = [[set([str(d) for d in range(1, 10)]) for x in range(9)] for x in range(9)]
 
-    def scan(self):
+    def eliminate_candidates(self):
         for line_nb, line in enumerate(self.sudoku):
             for col_nb, element in enumerate(line):
                 if element.isdigit() and self.candidates[line_nb][col_nb]:
                     for i in range(9):
                         # horizontal scanning
-                        self.candidates[line_nb][i].discard(int(element))
+                        self.candidates[line_nb][i].discard(element)
                         # vertical scanning
-                        self.candidates[i][col_nb].discard(int(element))
+                        self.candidates[i][col_nb].discard(element)
                     # section scanning
                     for y in range(line_nb // 3 * 3, line_nb // 3 * 3 + 3):
                         for x in range(col_nb // 3 * 3, col_nb // 3 * 3 + 3):
-                            self.candidates[y][x].discard(int(element))
+                            self.candidates[y][x].discard(element)
                     # remove all candidates when digit is known
                     self.candidates[line_nb][col_nb] = set()
+
+    def find_unique_candidates(self):
+        for line_nb in range(9):
+            for col_nb in range(9):
+                for candidate in self.candidates[line_nb][col_nb]:
+                    # horizontal scanning
+                    other_candidates = -1
+                    for i in range(9):
+                        if candidate in self.candidates[line_nb][i]:
+                            other_candidates += 1
+                    if not other_candidates:
+                        self.candidates[line_nb][col_nb] = set(candidate)
+                        break
+
+                    # vertical scanning
+                    other_candidates = -1
+                    for i in range(9):
+                        if candidate in self.candidates[i][col_nb]:
+                            other_candidates += 1
+                    if not other_candidates:
+                        self.candidates[line_nb][col_nb] = set(candidate)
+                        break
+
+                    # section scanning
+                    other_candidates = -1
+                    for y in range(line_nb // 3 * 3, line_nb // 3 * 3 + 3):
+                        for x in range(col_nb // 3 * 3, col_nb // 3 * 3 + 3):
+                            if candidate in self.candidates[i][col_nb]:
+                                other_candidates += 1
+                    if not other_candidates:
+                        self.candidates[line_nb][col_nb] = set(candidate)
+                        break
 
     def update(self):
         counter = 0
@@ -34,6 +66,7 @@ class SudokuSolver:
         if counter > 0:
             print(f'{counter} digit(s) updated.')
             return True
+        print(f'No digits updated.')
         return False
 
     def __str__(self):
@@ -52,10 +85,9 @@ class SudokuSolver:
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     sudoku = SudokuSolver('tables\\sudoku01.txt')
-    print(sudoku)
-    sudoku.scan()
-    sudoku.update()
-    print(sudoku)
-    sudoku.scan()
-    sudoku.update()
-    print(sudoku)
+    while(True):
+        sudoku.eliminate_candidates()
+        sudoku.find_unique_candidates()
+        if not sudoku.update():
+            break
+        print(sudoku)
