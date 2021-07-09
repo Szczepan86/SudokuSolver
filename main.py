@@ -1,3 +1,5 @@
+import time
+
 class SudokuSolver:
     def __init__(self, filename):
         self.sudoku = []
@@ -85,22 +87,25 @@ class SudokuSolver:
         print(f'No positions updated.')
         return False
 
-    def is_complete(self):
+    def is_complete(self, debug=False):
         for line in self.sudoku:
             if '.' in line:
-                print(f'Sudoku is not solved completely!')
+                if debug:
+                    print(f'Sudoku is not solved completely!')
                 return False
         return True
 
-    def validate(self):
+    def is_valid(self, debug=False):
         for i in range(9):
             row = [self.sudoku[i][x] for x in range(9) if self.sudoku[i][x] != '.']
             if len(row) != len(set(row)):
-                print(f'Row {row} is not an unique list')
+                if debug:
+                    print(f'Row {row} is not an unique list')
                 return False
             col = [self.sudoku[x][i] for x in range(9) if self.sudoku[x][i] != '.']
             if len(col) != len(set(col)):
-                print(f'Column {col} is not an unique list')
+                if debug:
+                    print(f'Column {col} is not an unique list')
                 return False
         for y_section in range(3):
             for x_section in range(3):
@@ -108,11 +113,36 @@ class SudokuSolver:
                 for y in range(y_section * 3, y_section * 3 + 3):
                     for x in range(x_section * 3, x_section * 3 + 3):
                         elements.append(self.sudoku[y][x])
-                section = [element for element in elements if elements != '.']
-                if len(elements) != len(set(elements)):
-                    print(f'Section {[self.sudoku[x][i] for x in range(9)]} is not an unique list')
+                section = [element for element in elements if element != '.']
+                if len(section) != len(set(section)):
+                    if debug:
+                        print(f'Section {section} is not an unique list')
                     return False
-        print(f'There is no mistake in the solution!')
+        if debug:
+            print(f'There is no mistake in the solution!')
+        return True
+
+    def brute_force(self):
+        action_list = []
+        while not self.is_complete() or not self.is_valid():
+            if self.is_valid():
+                for line_nb in range(9):
+                    for col_nb in range(9):
+                        if self.sudoku[line_nb][col_nb] == '.':
+                            next_line = line_nb
+                            next_col = col_nb
+                self.sudoku[next_line][next_col] = '1'
+                action_list.append((next_line, next_col, 1))
+            else:
+                last_action = action_list.pop()
+                while action_list and last_action[2] == '9':
+                    self.sudoku[last_action[0]][last_action[1]] = '.'
+                    last_action = action_list.pop()
+                if last_action[2] == '9' and not action_list:
+                    print(f'No solution found! Wrong dataset?')
+                    return False
+                self.sudoku[last_action[0]][last_action[1]] = str(int(last_action[2]) + 1)
+                action_list.append((last_action[0], last_action[1], str(int(last_action[2]) + 1)))
         return True
 
     def __str__(self):
@@ -130,7 +160,13 @@ class SudokuSolver:
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    sudoku = SudokuSolver('tables\\wrong01.txt')
+    start = time.time()
+    sudoku = SudokuSolver('tables\\expert01.txt')
+    sudoku.brute_force()
+    print(sudoku)
+    end = time.time()
+    print(end - start)
+    """
     print(sudoku)
     sudoku.eliminate_all_possible_candidates()
     while True:
@@ -141,4 +177,5 @@ if __name__ == '__main__':
         if not unique_candidates_found and not single_candidates_found:
             break
     sudoku.is_complete()
-    sudoku.validate()
+    sudoku.is_valid()
+    """
