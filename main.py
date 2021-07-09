@@ -96,7 +96,7 @@ class SudokuSolver:
                             if other_candidates > 0:
                                 continue
                     if other_candidates:
-                        # vertical scanning - launched only if previous range was unique
+                        # vertical scanning - launched only if previous range was not unique
                         other_candidates = -1
                         for i in range(9):
                             if candidate in self.candidates[i][col_nb]:
@@ -104,7 +104,7 @@ class SudokuSolver:
                                 if other_candidates > 0:
                                     continue
                     if other_candidates:
-                        # section scanning - launched only if previous ranges were unique
+                        # section scanning - launched only if previous ranges were not unique
                         other_candidates = -1
                         for y in range(line_nb // 3 * 3, line_nb // 3 * 3 + 3):
                             for x in range(col_nb // 3 * 3, col_nb // 3 * 3 + 3):
