@@ -3,6 +3,12 @@ import time
 
 class SudokuSolver:
     def __init__(self, filename, debug=False):
+        """
+        Read sudoku table and create basic attributes during object creation
+        :param filename: filename of sudoku array (9 lines x 9 digits, where 0 = empty place)
+        :param debug: additional printing for debug purpose
+        """
+        # sudoku is a two dimensional 9x9 array to store sudoku content
         self.sudoku = []
         with open(filename, encoding='utf-8') as file:
             for line in file:
@@ -10,26 +16,48 @@ class SudokuSolver:
                 assert len(row) == 9, 'Incorrect row length'
                 self.sudoku.append(row)
             assert len(self.sudoku) == 9, 'Incorrect number of lines'
-        self.initial_sudoku = self.sudoku
+        # initial_sudoku - copy of sudoku table, just in case rollback is needed
+        self.initial_sudoku = list(map(list, self.sudoku))
+        # 9x9 array of sets with all candidates for selected element
+        # candidate set contains all possible digits which were not excluded by the algorithm
         self.candidates = [[set([d for d in range(1, 10)]) for x in range(9)] for x in range(9)]
         self.debug = debug
 
     def solve(self):
+        """
+        Tries to solve sudoku table. Rollback to initial table if no solution found.
+        :return: True when sudoku is solved, False otherwise
+        """
+        # first, iterate over table and exclude all obvious candidates based on initial sudoku table
         self.eliminate_all_possible_candidates()
         while True:
+            # repeat searching for unique and single candidates as long as we have any results
             unique_candidates_found = self.find_unique_candidates()
             single_candidates_found = self.find_single_candidates()
             if not unique_candidates_found and not single_candidates_found:
                 break
-        if not sudoku.is_complete():
-            sudoku.brute_force_recursive()
+        # sudoku still not complete? time to launch brute force
+        if not sudoku.is_complete() and not sudoku.brute_force_recursive():
+            self.sudoku = list(map(list, self.initial_sudoku))
+            return False
+        return True
 
     def eliminate_all_possible_candidates(self):
+        """
+        Iterate over whole sudoku table and eliminate all unnecessary candidates.
+        :return: None
+        """
         for line_nb in range(9):
             for col_nb in range(9):
                 self.eliminate_aligned_candidates(line_nb, col_nb)
 
     def eliminate_aligned_candidates(self, line_nb, col_nb):
+        """
+        If digit is known, then it's removed from candidate list for line, column and section.
+        :param line_nb: line number of selected digit
+        :param col_nb: column number of selected digit
+        :return: None
+        """
         element = self.sudoku[line_nb][col_nb]
         if element:
             for i in range(9):
@@ -45,13 +73,22 @@ class SudokuSolver:
             self.candidates[line_nb][col_nb] = set([element])
 
     def find_unique_candidates(self):
+        """
+        Iterate over sudoku table and check if any of the candidates is unique within a line, column or section.
+        If it is - then it's a match.
+        :return: None
+        """
+        # counter just to track if there was any progress using this method
         counter = 0
+        # iterate over whole 9x9 matrix
         for line_nb in range(9):
             for col_nb in range(9):
+                # check all candidates if they're unique in their context (line / column / section)
                 for candidate in self.candidates[line_nb][col_nb]:
                     if self.sudoku[line_nb][col_nb]:
                         continue
                     # horizontal scanning
+                    # other_candidates initialized with -1 to avoid counting current candidate as the other one
                     other_candidates = -1
                     for i in range(9):
                         if candidate in self.candidates[line_nb][i]:
@@ -59,7 +96,7 @@ class SudokuSolver:
                             if other_candidates > 0:
                                 continue
                     if other_candidates:
-                        # vertical scanning
+                        # vertical scanning - launched only if previous range was unique
                         other_candidates = -1
                         for i in range(9):
                             if candidate in self.candidates[i][col_nb]:
@@ -67,7 +104,7 @@ class SudokuSolver:
                                 if other_candidates > 0:
                                     continue
                     if other_candidates:
-                        # section scanning
+                        # section scanning - launched only if previous ranges were unique
                         other_candidates = -1
                         for y in range(line_nb // 3 * 3, line_nb // 3 * 3 + 3):
                             for x in range(col_nb // 3 * 3, col_nb // 3 * 3 + 3):
@@ -76,19 +113,28 @@ class SudokuSolver:
                                     if other_candidates > 0:
                                         continue
                     if not other_candidates:
+                        # no other candidates found in line / column / section - so it's a match!
                         self.sudoku[line_nb][col_nb] = candidate
+                        # as new digit was revealed - we have to eliminate all corresponding candidates
                         self.eliminate_aligned_candidates(line_nb, col_nb)
                         counter += 1
                         break
-
+        # check if we were lucky this time
         if counter > 0:
             return True
         return False
 
     def find_single_candidates(self):
+        """
+        Iterate over sudoku table and check if there are no other candidates for specific position.
+        If there are not - then it's a match.
+        :return:
+        """
         counter = 0
+        # iterate over whole sudoku table
         for line_nb in range(9):
             for col_nb in range(9):
+                # if only one candidate and sudoku not updated for this pos - it's a new match!
                 if len(self.candidates[line_nb][col_nb]) == 1 and self.sudoku[line_nb][col_nb] == 0:
                     counter += 1
                     element = next(iter(self.candidates[line_nb][col_nb]))
@@ -102,6 +148,10 @@ class SudokuSolver:
         return False
 
     def is_complete(self):
+        """
+        Check if sudoku table is solved.
+        :return: None
+        """
         for line in self.sudoku:
             if 0 in line:
                 if self.debug:
@@ -109,18 +159,25 @@ class SudokuSolver:
                 return False
         return True
 
-    def is_valid(self, debug=False):
+    def is_valid(self):
+        """
+        Check if sudoku table is valid (no duplicates in lines / rows / sections)
+        :return: True when table is valid, False otherwise
+        """
         for i in range(9):
+            # verify there's no duplication in rows
             row = [self.sudoku[i][x] for x in range(9) if self.sudoku[i][x] != 0]
             if len(row) != len(set(row)):
                 if self.debug:
                     print(f'Row {row} is not an unique list')
                 return False
+            # verify there's no duplication in cols
             col = [self.sudoku[x][i] for x in range(9) if self.sudoku[x][i] != 0]
             if len(col) != len(set(col)):
                 if self.debug:
                     print(f'Column {col} is not an unique list')
                 return False
+        # verify there's no duplication in sections
         for y_section in range(3):
             for x_section in range(3):
                 elements = []
@@ -136,44 +193,43 @@ class SudokuSolver:
             print(f'There is no mistake in the solution!')
         return True
 
-    def brute_force(self):
-        action_list = []
-        while not self.is_complete() or not self.is_valid():
-            if self.is_valid():
-                next_line, next_col = self.find_last_empty()
-                self.sudoku[next_line][next_col] = '1'
-                action_list.append((next_line, next_col, 1))
-            else:
-                last_action = action_list.pop()
-                while action_list and last_action[2] == '9':
-                    self.sudoku[last_action[0]][last_action[1]] = 0
-                    last_action = action_list.pop()
-                if last_action[2] == '9' and not action_list:
-                    print(f'No solution found! Wrong dataset?')
-                    return False
-                self.sudoku[last_action[0]][last_action[1]] = last_action[2] + 1
-                action_list.append((last_action[0], last_action[1], last_action[2] + 1))
-        return True
+    def brute_force_recursive(self):
+        """
+        Recursive brute force algorithm. It's optimized to look only for available candidates based on the rest of
+        confirmed sudoku digits.
+        :return: True when solved and validated, False otherwise
+        """
+        # sudoku complete? so we're done here
+        if self.is_complete():
+            return True
+        # get the last empty element
+        line_nb, col_nb = self.find_last_empty()
+        # iterate over candidates for empty element
+        for i in self.candidates[line_nb][col_nb]:
+            self.sudoku[line_nb][col_nb] = i
+            # is it valid after using selected candidate? if so - go for the next one
+            if self.is_valid() and self.brute_force_recursive():
+                return True
+        # no candidates looks correct for current position - we have to go back and change previous value
+        self.sudoku[line_nb][col_nb] = 0
+        return False
 
     def find_last_empty(self):
+        """
+        Find the last empty element in sudoku table.
+        :return: line number and column number of the last empty element, None if none found
+        """
         for line_nb in range(8, -1, -1):
             for col_nb in range(8, -1, -1):
                 if self.sudoku[line_nb][col_nb] == 0:
                     return line_nb, col_nb
         return None
 
-    def brute_force_recursive(self):
-        if self.is_complete():
-            return True
-        line_nb, col_nb = self.find_last_empty()
-        for i in self.candidates[line_nb][col_nb]:
-            self.sudoku[line_nb][col_nb] = i
-            if self.is_valid() and self.brute_force_recursive():
-                return True
-        self.sudoku[line_nb][col_nb] = 0
-        return False
-
     def __str__(self):
+        """
+        Str override method, returns easy to read sudoku visualisation
+        :return: sudoku table as string
+        """
         output = ''
         for line_nb, line in enumerate(self.sudoku):
             if line_nb % 3 == 0 and line_nb < len(line) and line_nb:
@@ -190,10 +246,15 @@ class SudokuSolver:
 
 
 if __name__ == '__main__':
+    # just to track a computation time
     start = time.time()
-    sudoku = SudokuSolver('tables\\expert01.txt')
+    # create sudoku instance and read sudoku file
+    sudoku = SudokuSolver('tables\\test01.txt')
     print(sudoku)
-    sudoku.solve()
-    print(sudoku)
+    # try to solve sudoku and print it when solved
+    if sudoku.solve():
+        print(sudoku)
+    else:
+        print("No solution found - impossible dataset?")
     end = time.time()
     print(end - start)
