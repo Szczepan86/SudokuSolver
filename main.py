@@ -9,6 +9,7 @@ class SudokuSolver:
                 self.sudoku.append(row)
         self.initial_sudoku = self.sudoku
         self.candidates = [[set([str(d) for d in range(1, 10)]) for x in range(9)] for x in range(9)]
+        self.iterations = 0
 
     def eliminate_all_possible_candidates(self):
         for line_nb in range(9):
@@ -126,12 +127,11 @@ class SudokuSolver:
         action_list = []
         while not self.is_complete() or not self.is_valid():
             if self.is_valid():
-                for line_nb in range(9):
-                    for col_nb in range(9):
-                        if self.sudoku[line_nb][col_nb] == '.':
-                            next_line = line_nb
-                            next_col = col_nb
+                #print(self.iterations)
+                #print(self.__str__())
+                next_line, next_col = self.find_last_empty()
                 self.sudoku[next_line][next_col] = '1'
+                self.iterations += 1
                 action_list.append((next_line, next_col, 1))
             else:
                 last_action = action_list.pop()
@@ -142,8 +142,30 @@ class SudokuSolver:
                     print(f'No solution found! Wrong dataset?')
                     return False
                 self.sudoku[last_action[0]][last_action[1]] = str(int(last_action[2]) + 1)
+                self.iterations += 1
                 action_list.append((last_action[0], last_action[1], str(int(last_action[2]) + 1)))
         return True
+
+    def find_last_empty(self):
+        for line_nb in range(8, -1, -1):
+            for col_nb in range(8, -1, -1):
+                if self.sudoku[line_nb][col_nb] == '.':
+                    return line_nb, col_nb
+        return None
+
+    def brute_force_recursive(self):
+        #print(self.iterations)
+        #print(self.__str__())
+        if self.is_complete():
+            return True
+        line_nb, col_nb = self.find_last_empty()
+        for i in range(1, 10):
+            self.sudoku[line_nb][col_nb] = str(i)
+            self.iterations += 1
+            if self.is_valid() and self.brute_force_recursive():
+                return True
+        self.sudoku[line_nb][col_nb] = '.'
+        return False
 
     def __str__(self):
         output = ''
@@ -162,10 +184,13 @@ class SudokuSolver:
 if __name__ == '__main__':
     start = time.time()
     sudoku = SudokuSolver('tables\\expert01.txt')
-    sudoku.brute_force()
+    sudoku.eliminate_all_possible_candidates()
+    #sudoku.brute_force()
+    sudoku.brute_force_recursive()
     print(sudoku)
     end = time.time()
     print(end - start)
+    print(sudoku.iterations)
     """
     print(sudoku)
     sudoku.eliminate_all_possible_candidates()
