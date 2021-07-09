@@ -1,15 +1,28 @@
 import time
 
+
 class SudokuSolver:
-    def __init__(self, filename):
+    def __init__(self, filename, debug=False):
         self.sudoku = []
         with open(filename, encoding='utf-8') as file:
             for line in file:
                 row = [d for d in line if d.isdigit() or d == '.']
+                assert len(row) == 9, 'Incorrect row length'
                 self.sudoku.append(row)
+            assert len(self.sudoku) == 9, 'Incorrect number of lines'
         self.initial_sudoku = self.sudoku
         self.candidates = [[set([str(d) for d in range(1, 10)]) for x in range(9)] for x in range(9)]
-        self.iterations = 0
+        self.debug = debug
+
+    def solve(self):
+        self.eliminate_all_possible_candidates()
+        while True:
+            unique_candidates_found = self.find_unique_candidates()
+            single_candidates_found = self.find_single_candidates()
+            if not unique_candidates_found and not single_candidates_found:
+                break
+        if not sudoku.is_complete():
+            sudoku.brute_force_recursive()
 
     def eliminate_all_possible_candidates(self):
         for line_nb in range(9):
@@ -69,9 +82,7 @@ class SudokuSolver:
                         break
 
         if counter > 0:
-            print(f'{counter} position(s) updated.')
             return True
-        print(f'No positions updated.')
         return False
 
     def find_single_candidates(self):
@@ -83,15 +94,17 @@ class SudokuSolver:
                     element = next(iter(self.candidates[line_nb][col_nb]))
                     self.sudoku[line_nb][col_nb] = str(element)
         if counter > 0:
-            print(f'{counter} position(s) updated.')
+            if self.debug:
+                print(f'{counter} position(s) updated.')
             return True
-        print(f'No positions updated.')
+        if self.debug:
+            print(f'No positions updated.')
         return False
 
-    def is_complete(self, debug=False):
+    def is_complete(self):
         for line in self.sudoku:
             if '.' in line:
-                if debug:
+                if self.debug:
                     print(f'Sudoku is not solved completely!')
                 return False
         return True
@@ -100,12 +113,12 @@ class SudokuSolver:
         for i in range(9):
             row = [self.sudoku[i][x] for x in range(9) if self.sudoku[i][x] != '.']
             if len(row) != len(set(row)):
-                if debug:
+                if self.debug:
                     print(f'Row {row} is not an unique list')
                 return False
             col = [self.sudoku[x][i] for x in range(9) if self.sudoku[x][i] != '.']
             if len(col) != len(set(col)):
-                if debug:
+                if self.debug:
                     print(f'Column {col} is not an unique list')
                 return False
         for y_section in range(3):
@@ -116,10 +129,10 @@ class SudokuSolver:
                         elements.append(self.sudoku[y][x])
                 section = [element for element in elements if element != '.']
                 if len(section) != len(set(section)):
-                    if debug:
+                    if self.debug:
                         print(f'Section {section} is not an unique list')
                     return False
-        if debug:
+        if self.debug:
             print(f'There is no mistake in the solution!')
         return True
 
@@ -127,11 +140,8 @@ class SudokuSolver:
         action_list = []
         while not self.is_complete() or not self.is_valid():
             if self.is_valid():
-                #print(self.iterations)
-                #print(self.__str__())
                 next_line, next_col = self.find_last_empty()
                 self.sudoku[next_line][next_col] = '1'
-                self.iterations += 1
                 action_list.append((next_line, next_col, 1))
             else:
                 last_action = action_list.pop()
@@ -142,7 +152,6 @@ class SudokuSolver:
                     print(f'No solution found! Wrong dataset?')
                     return False
                 self.sudoku[last_action[0]][last_action[1]] = str(int(last_action[2]) + 1)
-                self.iterations += 1
                 action_list.append((last_action[0], last_action[1], str(int(last_action[2]) + 1)))
         return True
 
@@ -154,14 +163,11 @@ class SudokuSolver:
         return None
 
     def brute_force_recursive(self):
-        #print(self.iterations)
-        #print(self.__str__())
         if self.is_complete():
             return True
         line_nb, col_nb = self.find_last_empty()
-        for i in range(1, 10):
+        for i in self.candidates[line_nb][col_nb]:
             self.sudoku[line_nb][col_nb] = str(i)
-            self.iterations += 1
             if self.is_valid() and self.brute_force_recursive():
                 return True
         self.sudoku[line_nb][col_nb] = '.'
@@ -180,27 +186,11 @@ class SudokuSolver:
         return output
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     start = time.time()
-    sudoku = SudokuSolver('tables\\expert01.txt')
-    sudoku.eliminate_all_possible_candidates()
-    #sudoku.brute_force()
-    sudoku.brute_force_recursive()
+    sudoku = SudokuSolver('tables\\test01.txt')
+    print(sudoku)
+    sudoku.solve()
     print(sudoku)
     end = time.time()
     print(end - start)
-    print(sudoku.iterations)
-    """
-    print(sudoku)
-    sudoku.eliminate_all_possible_candidates()
-    while True:
-        unique_candidates_found = sudoku.find_unique_candidates()
-        print(sudoku)
-        single_candidates_found = sudoku.find_single_candidates()
-        print(sudoku)
-        if not unique_candidates_found and not single_candidates_found:
-            break
-    sudoku.is_complete()
-    sudoku.is_valid()
-    """
